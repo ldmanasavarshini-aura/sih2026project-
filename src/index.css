@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #0F766E;
+    --color-secondary: #16A34A;
+    --color-info: #0284C7;
+    --color-warning: #F59E0B;
+    --color-emergency: #DC2626;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased min-h-screen selection:bg-teal-100 selection:text-teal-900;
+  }
+}
+
+/* High Contrast Mode */
+.high-contrast {
+  --color-primary: #042F2C;
+  --color-secondary: #052E16;
+  --color-info: #0C4A6E;
+  --color-warning: #78350F;
+  --color-emergency: #7F1D1D;
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .bg-white {
+  background-color: #121212 !important;
+  border-color: #444444 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .bg-slate-50 {
+  background-color: #000000 !important;
+}
+
+.high-contrast .text-slate-600,
+.high-contrast .text-slate-500,
+.high-contrast .text-slate-700 {
+  color: #E2E8F0 !important;
+}
+
+/* Font size scaling utility classes */
+.font-size-normal {
+  font-size: 100%;
+}
+
+.font-size-lg {
+  font-size: 112.5%;
+}
+
+.font-size-xl {
+  font-size: 125%;
+}
+
+/* Smooth Animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
