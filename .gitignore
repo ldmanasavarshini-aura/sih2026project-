@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 sih2026project-/
+.vite
+
