@@ -41,9 +41,17 @@ import { ReportsPage } from './pages/official/ReportsPage';
 
 // Dashboard Dispatcher component based on active role
 const DynamicDashboard: React.FC = () => {
-  const { role } = useAuth();
+  const { role, firebaseRole } = useAuth();
+  if (firebaseRole === 'healthworker' || role === 'health_worker') {
+    return <Navigate to="/healthworker" replace />;
+  }
+  if (firebaseRole === 'doctor') {
+    return <Navigate to="/doctor" replace />;
+  }
+  if (firebaseRole === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
   if (role === 'citizen') return <CitizenDashboard />;
-  if (role === 'health_worker') return <WorkerDashboard />;
   return <OfficialDashboard />;
 };
 
@@ -82,6 +90,9 @@ export const AppContent: React.FC = () => {
           <Layout>
             <Routes>
               <Route path="dashboard" element={<DynamicDashboard />} />
+              <Route path="healthworker" element={<WorkerDashboard />} />
+              <Route path="doctor" element={<OfficialDashboard />} />
+              <Route path="admin" element={<OfficialDashboard />} />
               <Route path="help-matrix" element={<HelpMatrixPage />} />
 
               {/* Citizen Routes */}
