@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Siren,
-  Plus
+  Plus,
+  MapPin
 } from 'lucide-react';
 
 export const WorkerDashboard: React.FC = () => {
@@ -133,29 +134,37 @@ export const WorkerDashboard: React.FC = () => {
         <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
           Quick Operational Actions
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+          <button
+            onClick={() => navigate('/healthcare-map')}
+            className="p-3 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
+          >
+            <MapPin className="w-5 h-5 text-teal-700" />
+            <span>Find Hospital (Map)</span>
+          </button>
+
           <button
             onClick={() => navigate('/register-patient')}
             className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
           >
             <UserPlus className="w-5 h-5 text-emerald-700" />
-            <span>Register Patient</span>
+            <span>Add New Patient</span>
           </button>
 
           <button
             onClick={() => navigate('/triage')}
-            className="p-3 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
+            className="p-3 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
           >
-            <Stethoscope className="w-5 h-5 text-teal-700" />
-            <span>Start Triage</span>
+            <Stethoscope className="w-5 h-5 text-sky-700" />
+            <span>Check Risk</span>
           </button>
 
           <button
             onClick={() => navigate('/appointments/book')}
-            className="p-3 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
+            className="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
           >
-            <Calendar className="w-5 h-5 text-sky-700" />
-            <span>Book Appointment</span>
+            <Calendar className="w-5 h-5 text-blue-700" />
+            <span>Book Visit</span>
           </button>
 
           <button
@@ -171,7 +180,7 @@ export const WorkerDashboard: React.FC = () => {
             className="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
           >
             <Clock className="w-5 h-5 text-amber-700" />
-            <span>Record Follow-up</span>
+            <span>Next Check-up</span>
           </button>
 
           <button
@@ -179,7 +188,7 @@ export const WorkerDashboard: React.FC = () => {
             className="p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all"
           >
             <Building2 className="w-5 h-5 text-purple-700" />
-            <span>Check Medicine Stock</span>
+            <span>Check Stock</span>
           </button>
         </div>
       </div>

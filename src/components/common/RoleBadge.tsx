@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole } from '../../types';
-import { ShieldCheck, Eye, Edit3, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Eye, Edit3, ShieldAlert, Stethoscope } from 'lucide-react';
 
 interface RoleBadgeProps {
   role: UserRole;
@@ -21,6 +21,12 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, compact = false }) =
           bg: 'bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold',
           icon: <Edit3 className="w-4 h-4 text-emerald-600 shrink-0" />,
           label: 'Health Worker — Editor'
+        };
+      case 'doctor':
+        return {
+          bg: 'bg-violet-50 border-violet-300 text-violet-800 font-semibold',
+          icon: <Stethoscope className="w-4 h-4 text-violet-600 shrink-0" />,
+          label: 'Doctor — Consult & Update Care'
         };
       case 'official':
         return {

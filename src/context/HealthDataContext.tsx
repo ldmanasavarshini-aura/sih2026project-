@@ -42,13 +42,13 @@ interface HealthDataContextType {
   notifications: AppNotification[];
   auditLogs: AuditLogEntry[];
   triages: TriageRecord[];
-  
+
   // Connectivity & Offline
   isOnline: boolean;
   pendingSyncCount: number;
   toggleOnlineStatus: () => void;
   syncOfflineRecords: () => void;
-  
+
   // Health Worker Actions
   addPatient: (patient: Partial<Patient>, workerName: string) => Patient;
   updatePatient: (id: string, updates: Partial<Patient>, workerName: string) => void;
@@ -60,7 +60,7 @@ interface HealthDataContextType {
   updateReferralStatus: (id: string, status: ReferralStatus, notes?: string) => void;
   completeFollowUp: (id: string, outcomeNotes: string, workerName: string) => void;
   rescheduleFollowUp: (id: string, newDate: string, workerName: string) => void;
-  
+
   // Notifications
   markNotificationRead: (id: string) => void;
   completeNotificationTask: (id: string) => void;
