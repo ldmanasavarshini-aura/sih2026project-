@@ -1,71 +1,57 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
 
-@layer base {
-  :root {
-    --color-primary: #0F766E;
-    --color-secondary: #16A34A;
-    --color-info: #0284C7;
-    --color-warning: #F59E0B;
-    --color-emergency: #DC2626;
-  }
+@theme {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased min-h-screen selection:bg-teal-100 selection:text-teal-900;
-  }
+  --color-navy: #1C3A5E;
+  --color-navy-dark: #132845;
+  --color-navy-muted: #2D5282;
+  --color-teal: #0891B2;
+  --color-teal-light: #E0F2FE;
+  --color-health: #059669;
+  --color-health-light: #D1FAE5;
+  --color-amber-warn: #D97706;
+  --color-amber-light: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-ground: #F0F4F8;
+  --color-surface: #FFFFFF;
+  --color-border: #CBD5E1;
+  --color-text: #0F172A;
+  --color-muted: #64748B;
 }
 
-/* High Contrast Mode */
-.high-contrast {
-  --color-primary: #042F2C;
-  --color-secondary: #052E16;
-  --color-info: #0C4A6E;
-  --color-warning: #78350F;
-  --color-emergency: #7F1D1D;
-  background-color: #000000 !important;
-  color: #FFFFFF !important;
+* {
+  box-sizing: border-box;
 }
 
-.high-contrast .bg-white {
-  background-color: #121212 !important;
-  border-color: #444444 !important;
-  color: #FFFFFF !important;
+html, body, #root {
+  height: 100%;
+  margin: 0;
 }
 
-.high-contrast .bg-slate-50 {
-  background-color: #000000 !important;
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-ground);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
 }
 
-.high-contrast .text-slate-600,
-.high-contrast .text-slate-500,
-.high-contrast .text-slate-700 {
-  color: #E2E8F0 !important;
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-/* Font size scaling utility classes */
-.font-size-normal {
-  font-size: 100%;
+.font-serif {
+  font-family: var(--font-serif);
 }
 
-.font-size-lg {
-  font-size: 112.5%;
-}
-
-.font-size-xl {
-  font-size: 125%;
-}
-
-/* Smooth Animations */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.font-mono {
+  font-family: var(--font-mono);
 }

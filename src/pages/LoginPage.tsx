@@ -16,22 +16,24 @@ import {
   ShieldCheck,
   AlertCircle,
   UserCog
+  Mail
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { firebaseLogin } = useAuth();
   const { t } = useLanguage();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('citizen');
   const [step, setStep] = useState<'role' | 'input' | 'otp'>('role');
-  const [identifier, setIdentifier] = useState(DEMO_USERS['citizen'].phone);
-  const [otp, setOtp] = useState('123456');
+  const [identifier, setIdentifier] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
-    setIdentifier(DEMO_USERS[role].phone || DEMO_USERS[role].empId || '');
+    setIdentifier('');
+    setOtp('');
     setStep('input');
     setError(null);
   };
@@ -39,24 +41,25 @@ export const LoginPage: React.FC = () => {
   const handleProceedToOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim()) {
-      setError('Please enter your mobile number or employee ID.');
+      setError('Please enter your email address.');
       return;
     }
     setStep('otp');
     setError(null);
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp !== '123456' && otp !== '1234' && otp.trim() === '') {
-      setError('Invalid OTP code. Please enter 123456 for demo access.');
+    setError(null);
+    if (!otp.trim()) {
+      setError('Please enter your password.');
       return;
     }
-    const success = login(selectedRole, identifier, otp);
-    if (success) {
-      navigate('/dashboard');
+    const result = await firebaseLogin(identifier, otp);
+    if (result.success && result.role) {
+      navigate(`/${result.role}`);
     } else {
-      setError('Authentication failed.');
+      setError(result.error || 'Authentication failed.');
     }
   };
 
@@ -196,7 +199,7 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* STEP 2: PHONE / EMPLOYEE ID INPUT */}
+        {/* STEP 2: EMAIL INPUT */}
         {step === 'input' && (
           <form onSubmit={handleProceedToOtp} className="space-y-4 animate-fade-in">
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
@@ -218,14 +221,15 @@ export const LoginPage: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {selectedRole === 'citizen' ? 'Mobile Number / Patient ID' : selectedRole === 'doctor' ? 'Doctor ID / Medical Registration ID' : 'Employee ID / Registered Mobile'}
+                Email Address
               </label>
               <div className="relative">
-                <Phone className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="text"
+                  type="email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Enter number or ID"
+                  placeholder="Enter your registered email"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none"
                   required
                 />
@@ -236,35 +240,31 @@ export const LoginPage: React.FC = () => {
               type="submit"
               className="w-full py-3 px-4 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
             >
-              <span>Request Verification OTP</span>
+              <span>Proceed to Password</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         )}
 
-        {/* STEP 3: OTP VERIFICATION */}
+        {/* STEP 3: PASSWORD INPUT */}
         {step === 'otp' && (
           <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in text-center">
             <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-xs border border-emerald-200">
               <KeyRound className="w-6 h-6" />
             </div>
 
-            <h3 className="font-bold text-slate-900 text-base">Enter Verification OTP</h3>
+            <h3 className="font-bold text-slate-900 text-base">Enter Password</h3>
             <p className="text-xs text-slate-500">
-              OTP sent to registered mobile <strong className="text-slate-800">{identifier}</strong>
+              Enter password for account <strong className="text-slate-800">{identifier}</strong>
             </p>
-
-            <div className="bg-teal-50 border border-teal-200 p-2.5 rounded-xl text-xs text-teal-900 font-medium inline-block">
-              Demo Access Mock OTP Code: <strong className="font-mono text-sm text-teal-800">123456</strong>
-            </div>
 
             <div className="max-w-xs mx-auto">
               <input
-                type="text"
-                maxLength={6}
+                type="password"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="w-full text-center tracking-widest text-2xl font-mono font-bold py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none"
+                placeholder="Enter password"
+                className="w-full text-center py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none font-semibold text-lg"
                 required
               />
             </div>
@@ -282,7 +282,7 @@ export const LoginPage: React.FC = () => {
               onClick={() => setStep('input')}
               className="text-xs text-slate-500 hover:text-slate-800 font-medium block mx-auto mt-2"
             >
-              ← Back to phone input
+              ← Back to email input
             </button>
           </form>
         )}
@@ -290,3 +290,4 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+

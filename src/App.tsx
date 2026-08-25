@@ -133,30 +133,36 @@ export const AppContent: React.FC = () => {
               <Route path="reports" element={<ReportsPage />} />
               <Route path="disease-trends" element={<DiseaseTrendsPage />} />
               <Route path="quality-monitoring" element={<QualityMonitoringPage />} />
+import { useState } from 'react';
+import LoginScreen from './components/LoginScreen';
+import AppShell from './components/AppShell';
+import { LanguageProvider } from './contexts/LanguageContext';
 
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </Layout>
-        }
-      />
-    </Routes>
-  );
-};
+export type Role = 'health-worker' | 'doctor' | 'admin' | 'patient';
 
-export function App() {
-  return (
-    <AuthProvider>
-      <LanguageProvider>
-        <AccessibilityProvider>
-          <HealthDataProvider>
-            <Router>
-              <AppContent />
-            </Router>
-          </HealthDataProvider>
-        </AccessibilityProvider>
-      </LanguageProvider>
-    </AuthProvider>
-  );
+export interface UserSession {
+  role: Role;
+  name: string;
+  id: string;
+  clinic?: string;
+  patientId?: string;
 }
 
-export default App;
+export default function App() {
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [updateKey, setUpdateKey] = useState(0);
+
+  const content = session ? (
+    <AppShell session={session} onLogout={() => setSession(null)} onRefresh={() => setUpdateKey(k => k + 1)} />
+  ) : (
+    <LoginScreen onLogin={setSession} />
+  );
+
+  return (
+    <LanguageProvider>
+      <div className="h-full w-full relative">
+        {content}
+      </div>
+    </LanguageProvider>
+  );
+}

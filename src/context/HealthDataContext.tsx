@@ -26,6 +26,9 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_AUDIT_LOGS
 } from '../data/mockData';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { generateCallLink } from '../VideoCall';
 
 interface HealthDataContextType {
   patients: Patient[];
@@ -75,7 +78,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return saved ? JSON.parse(saved) : INITIAL_PATIENTS;
   });
 
-  const [facilities] = useState<Facility[]>(INITIAL_FACILITIES);
+  const [facilities, setFacilities] = useState<Facility[]>(INITIAL_FACILITIES);
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_HEALTH_KEY}_appointments`);
@@ -87,15 +90,15 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return saved ? JSON.parse(saved) : INITIAL_REFERRALS;
   });
 
-  const [testResults] = useState<TestResult[]>(INITIAL_TEST_RESULTS);
-  const [medicines] = useState<MedicineItem[]>(INITIAL_MEDICINES);
+  const [testResults, setTestResults] = useState<TestResult[]>(INITIAL_TEST_RESULTS);
+  const [medicines, setMedicines] = useState<MedicineItem[]>(INITIAL_MEDICINES);
 
   const [followUps, setFollowUps] = useState<FollowUpTask[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_HEALTH_KEY}_followups`);
     return saved ? JSON.parse(saved) : INITIAL_FOLLOWUPS;
   });
 
-  const [stocks] = useState<StockAvailability[]>(INITIAL_STOCKS);
+  const [stocks, setStocks] = useState<StockAvailability[]>(INITIAL_STOCKS);
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_HEALTH_KEY}_notifications`);
@@ -116,7 +119,58 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Save changes to localStorage
+  // Load from backend if online
+  useEffect(() => {
+    const loadFromBackend = async () => {
+      try {
+        const [
+          resPatients,
+          resAppointments,
+          resReferrals,
+          resFollowUps,
+          resNotifications,
+          resAuditLogs,
+          resTriages,
+          resFacilities,
+          resStocks,
+          resTestResults,
+          resMedicines
+        ] = await Promise.all([
+          fetch('/api/patients').then(res => res.ok ? res.json() : null),
+          fetch('/api/appointments').then(res => res.ok ? res.json() : null),
+          fetch('/api/referrals').then(res => res.ok ? res.json() : null),
+          fetch('/api/followups').then(res => res.ok ? res.json() : null),
+          fetch('/api/notifications').then(res => res.ok ? res.json() : null),
+          fetch('/api/audit-logs').then(res => res.ok ? res.json() : null),
+          fetch('/api/triages').then(res => res.ok ? res.json() : null),
+          fetch('/api/facilities').then(res => res.ok ? res.json() : null),
+          fetch('/api/stocks').then(res => res.ok ? res.json() : null),
+          fetch('/api/test-results').then(res => res.ok ? res.json() : null),
+          fetch('/api/medicines').then(res => res.ok ? res.json() : null)
+        ]);
+
+        if (resPatients) setPatients(resPatients);
+        if (resAppointments) setAppointments(resAppointments);
+        if (resReferrals) setReferrals(resReferrals);
+        if (resFollowUps) setFollowUps(resFollowUps);
+        if (resNotifications) setNotifications(resNotifications);
+        if (resAuditLogs) setAuditLogs(resAuditLogs);
+        if (resTriages) setTriages(resTriages);
+        if (resFacilities) setFacilities(resFacilities);
+        if (resStocks) setStocks(resStocks);
+        if (resTestResults) setTestResults(resTestResults);
+        if (resMedicines) setMedicines(resMedicines);
+      } catch (err) {
+        console.warn('Backend server unreachable. Using local storage fallbacks.', err);
+      }
+    };
+
+    if (isOnline) {
+      loadFromBackend();
+    }
+  }, [isOnline]);
+
+  // Save changes to localStorage (as offline fallback cache)
   useEffect(() => {
     localStorage.setItem(`${LOCAL_STORAGE_HEALTH_KEY}_patients`, JSON.stringify(patients));
   }, [patients]);
@@ -149,18 +203,50 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsOnline((prev) => !prev);
   };
 
-  const syncOfflineRecords = () => {
+  const syncOfflineRecords = async () => {
     if (pendingQueue.length === 0) return;
+    
+    if (isOnline) {
+      try {
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ queue: pendingQueue })
+        });
+        
+        if (res.ok) {
+          setPendingQueue([]);
+          // Reload from server
+          const updatedPatients = await fetch('/api/patients').then(r => r.json());
+          const updatedAppointments = await fetch('/api/appointments').then(r => r.json());
+          const updatedReferrals = await fetch('/api/referrals').then(r => r.json());
+          const updatedFollowups = await fetch('/api/followups').then(r => r.json());
+          const updatedAuditLogs = await fetch('/api/audit-logs').then(r => r.json());
+          const updatedTriages = await fetch('/api/triages').then(r => r.json());
+          
+          setPatients(updatedPatients);
+          setAppointments(updatedAppointments);
+          setReferrals(updatedReferrals);
+          setFollowUps(updatedFollowups);
+          setAuditLogs(updatedAuditLogs);
+          setTriages(updatedTriages);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to sync offline queue with backend:', err);
+      }
+    }
+
+    // Fallback sync logging if offline or request fails
     setPendingQueue([]);
-    // Add sync confirmation audit log
     const syncAudit: AuditLogEntry = {
       id: `AUD-SYNC-${Date.now()}`,
       patientId: 'MULTIPLE',
-      action: 'Offline Batch Sync Completed',
+      action: 'Offline Batch Sync Completed (Local)',
       updatedBy: 'Meena R (ASHA Worker)',
       userRole: 'health_worker',
       timestamp: new Date().toLocaleString(),
-      details: `${pendingQueue.length} records successfully synced from local buffer to central database.`
+      details: `${pendingQueue.length} records successfully synced locally.`
     };
     setAuditLogs((prev) => [syncAudit, ...prev]);
   };
@@ -176,6 +262,15 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       timestamp: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
       details
     };
+    
+    if (isOnline) {
+      fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEntry)
+      }).catch(err => console.error('Failed to post audit log to backend:', err));
+    }
+    
     setAuditLogs((prev) => [newEntry, ...prev]);
   };
 
@@ -217,7 +312,13 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       lastUpdatedAt: new Date().toLocaleString()
     };
 
-    if (!isOnline) {
+    if (isOnline) {
+      fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPatient)
+      }).catch(err => console.error('Failed to post patient to backend:', err));
+    } else {
       setPendingQueue((prev) => [...prev, { type: 'REGISTER_PATIENT', payload: newPatient }]);
     }
 
@@ -228,6 +329,16 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // 2. Update Patient
   const updatePatient = (id: string, updates: Partial<Patient>, workerName: string) => {
+    if (isOnline) {
+      fetch(`/api/patients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, lastUpdatedBy: workerName })
+      }).catch(err => console.error('Failed to update patient on backend:', err));
+    } else {
+      setPendingQueue((q) => [...q, { type: 'UPDATE_PATIENT', id, payload: updates }]);
+    }
+
     setPatients((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -237,9 +348,6 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             lastUpdatedBy: workerName,
             lastUpdatedAt: new Date().toLocaleString()
           };
-          if (!isOnline) {
-            setPendingQueue((q) => [...q, { type: 'UPDATE_PATIENT', id, payload: updates }]);
-          }
           return updated;
         }
         return p;
@@ -250,21 +358,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // 3. Record Vitals
   const recordVitals = (patientId: string, vitals: Vitals, workerName: string) => {
-    setPatients((prev) =>
-      prev.map((p) => {
-        if (p.id === patientId) {
-          const updated = {
-            ...p,
-            latestVitals: vitals,
-            lastUpdatedBy: workerName,
-            lastUpdatedAt: new Date().toLocaleString()
-          };
-          return updated;
-        }
-        return p;
-      })
-    );
-    logAudit(patientId, 'Recorded New Vitals', workerName, `BP: ${vitals.bp}, HR: ${vitals.heartRate}, SpO2: ${vitals.spO2}%`);
+    updatePatient(patientId, { latestVitals: vitals }, workerName);
   };
 
   // 4. Add Triage Record
@@ -294,6 +388,16 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       status: 'Submitted'
     };
 
+    if (isOnline) {
+      fetch('/api/triages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTriage)
+      }).catch(err => console.error('Failed to post triage to backend:', err));
+    } else {
+      setPendingQueue((prev) => [...prev, { type: 'ADD_TRIAGE', payload: newTriage }]);
+    }
+
     setTriages((prev) => [newTriage, ...prev]);
 
     // Update patient risk if higher
@@ -309,10 +413,6 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       );
     }
 
-    if (!isOnline) {
-      setPendingQueue((prev) => [...prev, { type: 'ADD_TRIAGE', payload: newTriage }]);
-    }
-
     logAudit(newTriage.patientId, 'Smart Triage Performed', workerName, `Calculated risk level: ${newTriage.calculatedRisk}`);
     return newTriage;
   };
@@ -321,6 +421,8 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const bookAppointment = (appointmentData: Partial<Appointment>, workerName: string): Appointment => {
     const newId = `APT-${Math.floor(9000 + Math.random() * 900)}`;
     const tokenNum = Math.floor(1 + Math.random() * 30);
+    const callLink = generateCallLink(newId);
+
     const newApt: Appointment = {
       id: newId,
       patientId: appointmentData.patientId || 'SS-PT-10021',
@@ -337,18 +439,42 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       instructions: appointmentData.instructions || 'Carry ID card and previous prescriptions.',
       status: 'Booked',
       createdAt: new Date().toLocaleString(),
-      createdBy: workerName
+      createdBy: workerName,
+      callLink: callLink
     };
 
-    setAppointments((prev) => [newApt, ...prev]);
-    if (!isOnline) {
+    // Save to Firestore collection "Appointments"
+    try {
+      const aptRef = doc(db, 'Appointments', newId);
+      setDoc(aptRef, newApt).catch((err) => console.error('Failed to write appointment to Firestore:', err));
+    } catch (err) {
+      console.error('Error referencing Firestore doc:', err);
+    }
+
+    if (isOnline) {
+      fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newApt)
+      }).catch(err => console.error('Failed to post appointment to backend:', err));
+    } else {
       setPendingQueue((prev) => [...prev, { type: 'BOOK_APPOINTMENT', payload: newApt }]);
     }
+
+    setAppointments((prev) => [newApt, ...prev]);
     logAudit(newApt.patientId, 'Appointment Booked', workerName, `Booked ${newApt.id} at ${newApt.facility} (${newApt.date})`);
     return newApt;
   };
 
   const updateAppointmentStatus = (id: string, status: Appointment['status'], reason?: string) => {
+    if (isOnline) {
+      fetch(`/api/appointments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, cancellationReason: reason })
+      }).catch(err => console.error('Failed to update appointment status on backend:', err));
+    }
+
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status, cancellationReason: reason } : a))
     );
@@ -387,15 +513,30 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       qrCodeToken: `REF-${referralData.patientId}-${newId}`
     };
 
-    setReferrals((prev) => [newRef, ...prev]);
-    if (!isOnline) {
+    if (isOnline) {
+      fetch('/api/referrals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRef)
+      }).catch(err => console.error('Failed to post referral to backend:', err));
+    } else {
       setPendingQueue((prev) => [...prev, { type: 'CREATE_REFERRAL', payload: newRef }]);
     }
+
+    setReferrals((prev) => [newRef, ...prev]);
     logAudit(newRef.patientId, 'Created Clinical Referral', workerName, `Created ${newId} (${newRef.urgency}) -> ${newRef.destinationFacility}`);
     return newRef;
   };
 
   const updateReferralStatus = (id: string, status: ReferralStatus, notes?: string) => {
+    if (isOnline) {
+      fetch(`/api/referrals/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, notes })
+      }).catch(err => console.error('Failed to update referral status on backend:', err));
+    }
+
     setReferrals((prev) =>
       prev.map((r) => {
         if (r.id === id) {
@@ -414,6 +555,14 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // 7. Complete Follow-Up
   const completeFollowUp = (id: string, outcomeNotes: string, workerName: string) => {
+    if (isOnline) {
+      fetch(`/api/followups/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Completed', visitOutcomeNotes: outcomeNotes, workerName })
+      }).catch(err => console.error('Failed to complete follow-up on backend:', err));
+    }
+
     setFollowUps((prev) =>
       prev.map((f) => {
         if (f.id === id) {
@@ -434,6 +583,14 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const rescheduleFollowUp = (id: string, newDate: string, workerName: string) => {
+    if (isOnline) {
+      fetch(`/api/followups/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: newDate, workerName })
+      }).catch(err => console.error('Failed to reschedule follow-up on backend:', err));
+    }
+
     setFollowUps((prev) =>
       prev.map((f) => {
         if (f.id === id) {
@@ -450,10 +607,26 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Notifications
   const markNotificationRead = (id: string) => {
+    if (isOnline) {
+      fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: true })
+      }).catch(err => console.error('Failed to update notification read status on backend:', err));
+    }
+
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
   };
 
   const completeNotificationTask = (id: string) => {
+    if (isOnline) {
+      fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionCompleted: true, isRead: true })
+      }).catch(err => console.error('Failed to complete notification action on backend:', err));
+    }
+
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, actionCompleted: true, isRead: true } : n))
     );

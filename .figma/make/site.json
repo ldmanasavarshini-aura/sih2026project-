@@ -1,0 +1,10 @@
+{
+  "description": "Enhancing access to quality public healthcare services, this app connects rural and underserved communities with vital medical resources and information.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
