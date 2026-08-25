@@ -5,6 +5,16 @@ import { LanguageProvider } from './context/LanguageContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { HealthDataProvider } from './context/HealthDataContext';
 
+export type Role = 'health-worker' | 'doctor' | 'admin' | 'patient';
+
+export interface UserSession {
+  role: Role;
+  name: string;
+  id: string;
+  clinic?: string;
+  patientId?: string;
+}
+
 import { Layout } from './components/layout/Layout';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -133,36 +143,31 @@ export const AppContent: React.FC = () => {
               <Route path="reports" element={<ReportsPage />} />
               <Route path="disease-trends" element={<DiseaseTrendsPage />} />
               <Route path="quality-monitoring" element={<QualityMonitoringPage />} />
-import { useState } from 'react';
-import LoginScreen from './components/LoginScreen';
-import AppShell from './components/AppShell';
-import { LanguageProvider } from './contexts/LanguageContext';
-
-export type Role = 'health-worker' | 'doctor' | 'admin' | 'patient';
-
-export interface UserSession {
-  role: Role;
-  name: string;
-  id: string;
-  clinic?: string;
-  patientId?: string;
-}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Layout>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
 
 export default function App() {
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [updateKey, setUpdateKey] = useState(0);
-
-  const content = session ? (
-    <AppShell session={session} onLogout={() => setSession(null)} onRefresh={() => setUpdateKey(k => k + 1)} />
-  ) : (
-    <LoginScreen onLogin={setSession} />
-  );
-
   return (
-    <LanguageProvider>
-      <div className="h-full w-full relative">
-        {content}
-      </div>
-    </LanguageProvider>
+    <Router>
+      <LanguageProvider>
+        <AccessibilityProvider>
+          <AuthProvider>
+            <HealthDataProvider>
+              <div className="h-full w-full relative min-h-screen bg-slate-50">
+                <AppContent />
+              </div>
+            </HealthDataProvider>
+          </AuthProvider>
+        </AccessibilityProvider>
+      </LanguageProvider>
+    </Router>
   );
 }
+

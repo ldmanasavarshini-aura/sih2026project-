@@ -15,7 +15,7 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
-  UserCog
+  UserCog,
   Mail
 } from 'lucide-react';
 
