@@ -115,6 +115,7 @@ export interface Appointment {
   rescheduledFrom?: string;
   createdAt: string;
   createdBy: string;
+  callLink?: string;
 }
 
 export type ReferralStatus = 

@@ -58,7 +58,8 @@ export const BottomNav: React.FC = () => {
       <div className="flex justify-around items-center h-12">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path ||
+                           (item.path === '/dashboard' && ['/healthworker', '/doctor', '/admin'].includes(location.pathname));
           return (
             <button
               key={item.path}
