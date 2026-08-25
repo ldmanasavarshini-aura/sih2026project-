@@ -34,6 +34,14 @@ export default defineConfig(({ mode }) => {
       port: parseInt(process.env.PORT || '8443'),
       strictPort: false,
       watch: { ignored: ['**/.figma/**'] },
+      proxy: {
+        // Forward all /api/* requests to the Express backend during development
+        '/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     preview: {
       host: '0.0.0.0',
