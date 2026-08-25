@@ -9,6 +9,7 @@ import { Layout } from './components/layout/Layout';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { HelpMatrixPage } from './pages/HelpMatrixPage';
+import { MaharashtraMapPage } from './pages/MaharashtraMapPage';
 
 // Citizen Pages
 import { CitizenDashboard } from './pages/citizen/CitizenDashboard';
@@ -30,6 +31,15 @@ import { AppointmentsPage } from './pages/healthworker/AppointmentsPage';
 import { ReferralsPage } from './pages/healthworker/ReferralsPage';
 import { FollowUpsPage } from './pages/healthworker/FollowUpsPage';
 import { ServicesPage } from './pages/healthworker/ServicesPage';
+import { CareModulesPage } from './pages/healthworker/CareModulesPage';
+import { DiagnosticsPage } from './pages/healthworker/DiagnosticsPage';
+import { QueuePage } from './pages/healthworker/QueuePage';
+
+// Doctor Pages
+import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
+import { DoctorPatientView } from './pages/doctor/DoctorPatientView';
+import { ConsultationPage } from './pages/doctor/ConsultationPage';
+import { TeleconsultationPage } from './pages/doctor/TeleconsultationPage';
 
 // Higher Official Pages
 import { OfficialDashboard } from './pages/official/OfficialDashboard';
@@ -38,12 +48,15 @@ import { ReferralAnalytics } from './pages/official/ReferralAnalytics';
 import { HighRiskMonitoring } from './pages/official/HighRiskMonitoring';
 import { StockMonitoring } from './pages/official/StockMonitoring';
 import { ReportsPage } from './pages/official/ReportsPage';
+import { DiseaseTrendsPage } from './pages/official/DiseaseTrendsPage';
+import { QualityMonitoringPage } from './pages/official/QualityMonitoringPage';
 
 // Dashboard Dispatcher component based on active role
 const DynamicDashboard: React.FC = () => {
   const { role } = useAuth();
   if (role === 'citizen') return <CitizenDashboard />;
   if (role === 'health_worker') return <WorkerDashboard />;
+  if (role === 'doctor') return <DoctorDashboard />;
   return <OfficialDashboard />;
 };
 
@@ -83,6 +96,7 @@ export const AppContent: React.FC = () => {
             <Routes>
               <Route path="dashboard" element={<DynamicDashboard />} />
               <Route path="help-matrix" element={<HelpMatrixPage />} />
+              <Route path="healthcare-map" element={<MaharashtraMapPage />} />
 
               {/* Citizen Routes */}
               <Route path="my-health-record" element={<MyHealthRecord />} />
@@ -98,15 +112,27 @@ export const AppContent: React.FC = () => {
               <Route path="patients/:id" element={<PatientDetail />} />
               <Route path="register-patient" element={<RegisterPatient />} />
               <Route path="triage" element={<TriagePage />} />
+              <Route path="queue" element={<QueuePage />} />
               <Route path="appointments/book" element={<AppointmentsPage />} />
               <Route path="referrals/create" element={<ReferralsPage />} />
               <Route path="services" element={<ServicesPage />} />
+              <Route path="care-modules" element={<CareModulesPage />} />
+              <Route path="diagnostics" element={<DiagnosticsPage />} />
+
+              {/* Doctor Routes */}
+              <Route path="doctor-patients" element={<PatientList />} />
+              <Route path="doctor-patients/:id" element={<DoctorPatientView />} />
+              <Route path="consultations" element={<ConsultationPage />} />
+              <Route path="consultation/:id" element={<ConsultationPage />} />
+              <Route path="teleconsultation/:id" element={<TeleconsultationPage />} />
 
               {/* Official Routes */}
               <Route path="facilities" element={<FacilityPerformance />} />
               <Route path="high-risk" element={<HighRiskMonitoring />} />
               <Route path="stocks" element={<StockMonitoring />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="disease-trends" element={<DiseaseTrendsPage />} />
+              <Route path="quality-monitoring" element={<QualityMonitoringPage />} />
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

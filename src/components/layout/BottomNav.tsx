@@ -14,7 +14,8 @@ import {
   Building2,
   BarChart3,
   PackageCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  MapPin
 } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
@@ -27,25 +28,33 @@ export const BottomNav: React.FC = () => {
     if (role === 'citizen') {
       return [
         { path: '/dashboard', label: 'Home', icon: Home },
+        { path: '/healthcare-map', label: 'Map', icon: MapPin },
         { path: '/my-health-record', label: 'Record', icon: FileText },
         { path: '/appointments', label: 'Appts', icon: Calendar },
-        { path: '/referrals', label: 'Referrals', icon: Share2 },
         { path: '/profile', label: 'Profile', icon: User }
       ];
     } else if (role === 'health_worker') {
       return [
         { path: '/dashboard', label: 'Home', icon: Home },
+        { path: '/healthcare-map', label: 'Map', icon: MapPin },
         { path: '/patients', label: 'Patients', icon: Users },
-        { path: '/triage', label: 'Triage', icon: Stethoscope },
-        { path: '/referrals', label: 'Referrals', icon: Share2 },
-        { path: '/follow-ups', label: 'Follow-ups', icon: Clock }
+        { path: '/triage', label: 'Risk', icon: Stethoscope },
+        { path: '/referrals', label: 'Referrals', icon: Share2 }
+      ];
+    } else if (role === 'doctor') {
+      return [
+        { path: '/dashboard', label: 'Home', icon: Home },
+        { path: '/healthcare-map', label: 'Map', icon: MapPin },
+        { path: '/doctor-patients', label: 'Queue', icon: Users },
+        { path: '/consultations', label: 'Consult', icon: Stethoscope },
+        { path: '/referrals', label: 'Referrals', icon: Share2 }
       ];
     } else {
       return [
         { path: '/dashboard', label: 'Overview', icon: BarChart3 },
+        { path: '/healthcare-map', label: 'Map', icon: MapPin },
         { path: '/facilities', label: 'Facilities', icon: Building2 },
         { path: '/referrals', label: 'Analytics', icon: Share2 },
-        { path: '/stocks', label: 'Stock', icon: PackageCheck },
         { path: '/reports', label: 'Reports', icon: FileSpreadsheet }
       ];
     }

@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   Siren,
-  HeartHandshake
+  HeartHandshake,
+  MapPin
 } from 'lucide-react';
 
 export const CitizenDashboard: React.FC = () => {
@@ -66,13 +67,23 @@ export const CitizenDashboard: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowQR(true)}
-          className="py-2.5 px-4 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold rounded-xl text-xs flex items-center gap-2 border border-teal-200 transition-all shadow-2xs"
-        >
-          <QrCode className="w-4 h-4 text-teal-700" />
-          <span>Show Patient Health QR Token</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/healthcare-map')}
+            className="py-2.5 px-4 bg-teal-700 hover:bg-teal-800 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm"
+          >
+            <MapPin className="w-4 h-4 text-emerald-300" />
+            <span>Find Nearby Hospital or PHC</span>
+          </button>
+
+          <button
+            onClick={() => setShowQR(true)}
+            className="py-2.5 px-4 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold rounded-xl text-xs flex items-center gap-2 border border-teal-200 transition-all shadow-2xs"
+          >
+            <QrCode className="w-4 h-4 text-teal-700" />
+            <span>Show Patient Health QR Token</span>
+          </button>
+        </div>
       </div>
 
       {/* Health Risk & Vitals Overview Card */}

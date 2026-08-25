@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   Siren,
   ChevronDown,
-  X
+  X,
+  UserCog
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -345,7 +346,7 @@ export const Header: React.FC = () => {
 
             <h3 className="text-xl font-bold text-slate-900 mb-1">Select Demo User Role</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Instantly test SwasthyaSetu permissions across all three user roles.
+              Instantly test SwasthyaSetu permissions across all four user roles.
             </p>
 
             <div className="space-y-3">
@@ -387,6 +388,25 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
+              {/* Doctor Card */}
+              <div
+                onClick={() => handleDemoSwitch('doctor')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  role === 'doctor' ? 'border-violet-600 bg-violet-50/60 shadow-sm' : 'border-slate-200 hover:border-violet-500 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">3. Doctor</h4>
+                    <p className="text-xs text-violet-800 font-semibold mt-0.5">Dr. Arun Kumar (MCI: DR-MCI-4421)</p>
+                    <p className="text-[11px] text-slate-500">Facility: Neelambur PHC | Consult & Prescribe</p>
+                  </div>
+                  <span className="bg-violet-100 text-violet-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-violet-200">
+                    CONSULT + UPDATE
+                  </span>
+                </div>
+              </div>
+
               {/* Official Card */}
               <div
                 onClick={() => handleDemoSwitch('official')}
@@ -396,7 +416,7 @@ export const Header: React.FC = () => {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">3. Higher Official / Admin</h4>
+                    <h4 className="font-bold text-slate-900 text-sm">4. Higher Official / Admin</h4>
                     <p className="text-xs text-indigo-800 font-semibold mt-0.5">Priya Deshmukh (District Health Officer)</p>
                     <p className="text-[11px] text-slate-500">District: Coimbatore | Aggregate Monitoring</p>
                   </div>

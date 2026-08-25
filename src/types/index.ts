@@ -1,4 +1,4 @@
-export type UserRole = 'citizen' | 'health_worker' | 'official';
+export type UserRole = 'citizen' | 'health_worker' | 'doctor' | 'official';
 
 export interface UserProfile {
   id: string;
@@ -11,7 +11,8 @@ export interface UserProfile {
   district?: string;
   phone: string;
   empId?: string;
-  accessLevel: 'View Only' | 'Create and Edit' | 'View Only Dashboard';
+  accessLevel: 'View Only' | 'Create and Edit' | 'Consult and Update Care' | 'View Only Dashboard';
+  specialty?: string;
 }
 
 export type RiskLevel = 'Green' | 'Yellow' | 'Red' | 'Emergency';
@@ -121,6 +122,9 @@ export type ReferralStatus =
   | 'Created'
   | 'Sent'
   | 'Accepted'
+  | 'Patient Reached'
+  | 'Consulted'
+  | 'Completed'
   | 'Facility Visit'
   | 'Consultation Complete'
   | 'Follow-up';
@@ -205,8 +209,9 @@ export interface FollowUpTask {
 export interface Facility {
   id: string;
   name: string;
-  type: 'Sub-Centre' | 'PHC' | 'Government Hospital' | 'Medical College Hospital';
+  type: 'Sub-Centre' | 'PHC' | 'Government Hospital' | 'Medical College Hospital' | 'Rural Hospital' | 'District Hospital';
   district: string;
+  taluk?: string;
   villageOrTaluk: string;
   distanceKm: number;
   doctorsAvailable: number;
@@ -218,6 +223,16 @@ export interface Facility {
   staffCount: number;
   activeQueueCount: number;
   contactNumber: string;
+  lat?: number;
+  lng?: number;
+  hasEmergency?: boolean;
+  hasBloodTest?: boolean;
+  hasXRay?: boolean;
+  hasPregnancyCare?: boolean;
+  hasChildCare?: boolean;
+  hasTeleconsultation?: boolean;
+  medicineStatus?: 'Available' | 'Low Stock' | 'Unavailable';
+  diagnosticStatus?: 'Available' | 'Limited' | 'Unavailable';
 }
 
 export interface StockAvailability {
@@ -253,4 +268,24 @@ export interface AuditLogEntry {
   userRole: UserRole;
   timestamp: string;
   details: string;
+}
+
+export interface DoctorConsultation {
+  id: string;
+  patientId: string;
+  patientName: string;
+  doctorId: string;
+  doctorName: string;
+  consultationDate: string;
+  chiefComplaints: string[];
+  clinicalFindings: string;
+  diagnosis: string;
+  prescription: { medicineName: string; dosage: string; frequency: string; duration: string }[];
+  treatmentPlan: string;
+  referralRecommendation: 'None' | 'Accept' | 'Modify' | 'Reject';
+  referralNotes?: string;
+  followUpDate?: string;
+  isEmergency: boolean;
+  teleconsultation: boolean;
+  status: 'Draft' | 'Saved' | 'Submitted';
 }

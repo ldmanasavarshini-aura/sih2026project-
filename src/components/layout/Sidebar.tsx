@@ -19,8 +19,12 @@ import {
   PackageCheck,
   FileSpreadsheet,
   HelpCircle,
-  Bell,
-  Activity
+  Activity,
+  Heart,
+  Video,
+  Award,
+  TrendingUp,
+  MapPin
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -33,6 +37,7 @@ export const Sidebar: React.FC = () => {
     if (role === 'citizen') {
       return [
         { path: '/dashboard', label: t('dashboard'), icon: Home },
+        { path: '/healthcare-map', label: t('find_nearby_hospital'), icon: MapPin, highlight: true },
         { path: '/my-health-record', label: t('my_health_record'), icon: FileText },
         { path: '/appointments', label: t('appointments'), icon: Calendar },
         { path: '/referrals', label: t('referrals'), icon: Share2 },
@@ -44,22 +49,44 @@ export const Sidebar: React.FC = () => {
     } else if (role === 'health_worker') {
       return [
         { path: '/dashboard', label: t('dashboard'), icon: Home },
+        { path: '/healthcare-map', label: t('find_nearby_hospital'), icon: MapPin, highlight: true },
         { path: '/patients', label: t('patients'), icon: Users },
-        { path: '/register-patient', label: t('register_patient'), icon: UserPlus, highlight: true },
-        { path: '/triage', label: t('triage'), icon: Stethoscope },
+        { path: '/register-patient', label: t('register_patient'), icon: UserPlus },
+        { path: '/triage', label: 'Check Patient Risk (AI Risk)', icon: Stethoscope },
+        { path: '/queue', label: 'OPD Queue', icon: Clock },
         { path: '/appointments', label: t('appointments'), icon: Calendar },
+        { path: '/teleconsultation/SS-PT-10021', label: t('talk_to_doctor_online'), icon: Video },
         { path: '/referrals', label: t('referrals'), icon: Share2 },
+        { path: '/diagnostics', label: 'Diagnostics', icon: TestTube },
+        { path: '/services', label: 'Medicines', icon: Building2 },
         { path: '/follow-ups', label: t('follow_ups'), icon: Clock },
-        { path: '/services', label: t('services'), icon: Building2 },
+        { path: '/care-modules', label: 'Maternal, Child & Chronic', icon: Heart },
+        { path: '/profile', label: t('profile'), icon: User }
+      ];
+    } else if (role === 'doctor') {
+      return [
+        { path: '/dashboard', label: 'Doctor Dashboard', icon: Home },
+        { path: '/healthcare-map', label: t('find_nearby_hospital'), icon: MapPin, highlight: true },
+        { path: '/doctor-patients', label: 'Patient Queue', icon: Users },
+        { path: '/consultations', label: 'Consultations', icon: Stethoscope },
+        { path: '/teleconsultation/SS-PT-10021', label: t('talk_to_doctor_online'), icon: Video },
+        { path: '/diagnostics', label: 'Diagnostics', icon: TestTube },
+        { path: '/referrals', label: 'Referrals', icon: Share2 },
+        { path: '/follow-ups', label: 'Follow-ups', icon: Clock },
+        { path: '/care-modules', label: 'Chronic & Specialized Care', icon: Heart },
         { path: '/profile', label: t('profile'), icon: User }
       ];
     } else {
       return [
         { path: '/dashboard', label: t('dashboard'), icon: BarChart3 },
+        { path: '/healthcare-map', label: t('find_nearby_hospital'), icon: MapPin, highlight: true },
         { path: '/facilities', label: t('facility_performance'), icon: Building2 },
+        { path: '/disease-trends', label: 'Disease Trends', icon: TrendingUp },
         { path: '/referrals', label: t('referral_analytics'), icon: Share2 },
         { path: '/high-risk', label: t('high_risk_monitoring'), icon: Activity },
-        { path: '/stocks', label: t('medicines'), icon: PackageCheck },
+        { path: '/stocks', label: 'Medicine Availability', icon: PackageCheck },
+        { path: '/diagnostics', label: 'Diagnostic Availability', icon: TestTube },
+        { path: '/quality-monitoring', label: 'Quality & Accountability', icon: Award },
         { path: '/reports', label: t('reports'), icon: FileSpreadsheet },
         { path: '/profile', label: t('profile'), icon: User }
       ];
@@ -82,7 +109,7 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                 isActive
                   ? 'bg-teal-700 text-white shadow-xs'
                   : item.highlight

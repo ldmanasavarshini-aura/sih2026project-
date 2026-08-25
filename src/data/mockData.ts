@@ -9,7 +9,8 @@ import {
   StockAvailability, 
   AppNotification,
   AuditLogEntry,
-  UserProfile
+  UserProfile,
+  DoctorConsultation
 } from '../types';
 
 export const DEMO_USERS: Record<string, UserProfile> = {
@@ -46,6 +47,18 @@ export const DEMO_USERS: Record<string, UserProfile> = {
     phone: '+91 94430 11002',
     empId: 'DHO-CBE-001',
     accessLevel: 'View Only Dashboard',
+  },
+  doctor: {
+    id: 'USR-DR-404',
+    name: 'Dr. Arun Kumar',
+    role: 'doctor',
+    roleTitle: 'Medical Officer — General Medicine',
+    specialty: 'General Medicine & Obstetrics',
+    facility: 'Neelambur PHC',
+    district: 'Coimbatore',
+    phone: '+91 98120 33441',
+    empId: 'DR-MCI-4421',
+    accessLevel: 'Consult and Update Care',
   }
 };
 
@@ -721,6 +734,35 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     timestamp: 'Yesterday',
     type: 'warning',
     isRead: true
+  },
+  {
+    id: 'NOTIF-07',
+    forRole: 'doctor',
+    title: '⚠️ High-Risk Patient: Lakshmi Devi',
+    message: 'Lakshmi Devi (SS-PT-10021) — Gestational Hypertension BP 150/95 at 24 weeks. Referred for urgent specialist review. Priority consultation required.',
+    timestamp: '10:00 AM Today',
+    type: 'emergency',
+    isRead: false,
+    actionRequired: true,
+    actionCompleted: false
+  },
+  {
+    id: 'NOTIF-08',
+    forRole: 'doctor',
+    title: 'Emergency Referral — Murugan (67y)',
+    message: 'Acute cardiac chest pain. SpO2 92%, BP 165/102. ECG shows ST elevation. Immediate CCU referral sent to CMCH.',
+    timestamp: '08:32 AM Today',
+    type: 'emergency',
+    isRead: false
+  },
+  {
+    id: 'NOTIF-09',
+    forRole: 'doctor',
+    title: 'New Consultation Request',
+    message: 'Ramesh Kumar (57y, Kallipalayam) scheduled for NCD Clinic today at 09:00 AM. Diabetes & Hypertension review.',
+    timestamp: '08:00 AM Today',
+    type: 'info',
+    isRead: false
   }
 ];
 
@@ -742,5 +784,53 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     userRole: 'health_worker',
     timestamp: '2026-08-20 11:30 AM',
     details: 'Appointment APT-9042 booked at Neelambur PHC for diabetes refill.'
+  }
+];
+
+export const INITIAL_DOCTOR_CONSULTATIONS: DoctorConsultation[] = [
+  {
+    id: 'CON-DC-001',
+    patientId: 'SS-PT-10022',
+    patientName: 'Ramesh Kumar',
+    doctorId: 'USR-DR-404',
+    doctorName: 'Dr. Arun Kumar',
+    consultationDate: '2026-08-25 09:15 AM',
+    chiefComplaints: ['High blood sugar readings at home', 'Mild dizziness in mornings'],
+    clinicalFindings: 'BP 138/88 mmHg, Fasting blood sugar 185 mg/dL, HbA1c 7.8%. No foot ulcers. Fundus normal.',
+    diagnosis: 'Type 2 Diabetes Mellitus — Suboptimal glycaemic control. Hypertension — Stable.',
+    prescription: [
+      { medicineName: 'Metformin 500mg', dosage: '1 tablet', frequency: 'Twice daily after food', duration: '30 days' },
+      { medicineName: 'Amlodipine 5mg', dosage: '1 tablet', frequency: 'Once daily morning', duration: '30 days' },
+      { medicineName: 'Empagliflozin 10mg', dosage: '1 tablet', frequency: 'Once daily morning', duration: '30 days' }
+    ],
+    treatmentPlan: 'Step-up oral hypoglycaemic therapy. Diet counselling for low-carb diet. Daily walking 30 min. Monthly BP and sugar monitoring. Review HbA1c at 3 months.',
+    referralRecommendation: 'None',
+    followUpDate: '2026-09-25',
+    isEmergency: false,
+    teleconsultation: false,
+    status: 'Submitted'
+  },
+  {
+    id: 'CON-DC-002',
+    patientId: 'SS-PT-10021',
+    patientName: 'Lakshmi Devi',
+    doctorId: 'USR-DR-404',
+    doctorName: 'Dr. Arun Kumar',
+    consultationDate: '2026-08-24 11:00 AM',
+    chiefComplaints: ['Frontal headache', 'Mild ankle swelling', 'Nausea since morning'],
+    clinicalFindings: 'BP 150/95 mmHg (repeated twice), Oedema bilateral feet +1, Urine albumin trace positive. Fetal heart sound 142 bpm — normal. Fundal height 22 cm at 24 weeks.',
+    diagnosis: 'Gestational Hypertension with early pre-eclampsia features at 24 weeks gestation.',
+    prescription: [
+      { medicineName: 'Labetalol 100mg', dosage: '1 tablet', frequency: 'Twice daily after meals', duration: '30 days' },
+      { medicineName: 'Iron-Folic Acid (IFA)', dosage: '1 tablet', frequency: 'Once daily after lunch', duration: '90 days' },
+      { medicineName: 'Calcium 500mg', dosage: '1 tablet', frequency: 'Twice daily', duration: '90 days' }
+    ],
+    treatmentPlan: 'Urgent referral to Coimbatore Medical College Hospital High-Risk Obstetrics. Doppler ultrasound and 24-hour urine protein required. Bed rest advised. Weekly BP monitoring until referral.',
+    referralRecommendation: 'Accept',
+    referralNotes: 'Confirmed referral REF-8831 to CMCH ANC OPD. Transport pre-arranged for Aug 26 08:30 AM.',
+    followUpDate: '2026-08-31',
+    isEmergency: false,
+    teleconsultation: true,
+    status: 'Submitted'
   }
 ];

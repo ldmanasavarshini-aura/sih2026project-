@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useHealthData } from '../../context/HealthDataContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -30,10 +31,12 @@ import {
   Siren,
   TrendingUp,
   FileSpreadsheet,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 
 export const OfficialDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { facilities, referrals, stocks } = useHealthData();
@@ -96,19 +99,29 @@ export const OfficialDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* View Filters */}
-        <div className="flex items-center gap-2 text-xs">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={selectedFacilityFilter}
-            onChange={(e) => setSelectedFacilityFilter(e.target.value)}
-            className="p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+        {/* View Filters & Map Button */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            onClick={() => navigate('/healthcare-map')}
+            className="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
           >
-            <option value="all">All District Facilities</option>
-            {facilities.map((f) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
+            <MapPin className="w-4 h-4 text-indigo-200" />
+            <span>Maharashtra Map Monitoring</span>
+          </button>
+
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <Filter className="w-4 h-4 text-slate-400 ml-1" />
+            <select
+              value={selectedFacilityFilter}
+              onChange={(e) => setSelectedFacilityFilter(e.target.value)}
+              className="p-1.5 bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All District Facilities</option>
+              {facilities.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

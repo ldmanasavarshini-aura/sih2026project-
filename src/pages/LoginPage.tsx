@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  UserCog
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -141,7 +142,33 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Role 3: Official */}
+            {/* Role 3: Doctor */}
+            <div
+              onClick={() => handleRoleSelect('doctor')}
+              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                selectedRole === 'doctor'
+                  ? 'border-violet-600 bg-violet-50/70 shadow-md ring-2 ring-violet-600/20'
+                  : 'border-slate-200 hover:border-violet-500 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-800 flex items-center justify-center shrink-0">
+                  <UserCog className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-slate-900 text-sm">3. Doctor</h3>
+                    <span className="bg-violet-100 text-violet-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-violet-200">
+                      CONSULT + UPDATE CARE
+                    </span>
+                  </div>
+                  <p className="text-xs text-violet-800 font-semibold mt-0.5">Dr. Arun Kumar (MCI: DR-MCI-4421)</p>
+                  <p className="text-[11px] text-slate-500">Facility: Neelambur PHC | Review, consult & prescribe</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Role 4: Official */}
             <div
               onClick={() => handleRoleSelect('official')}
               className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
@@ -156,7 +183,7 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900 text-sm">3. Higher Official</h3>
+                    <h3 className="font-bold text-slate-900 text-sm">4. Higher Official</h3>
                     <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200">
                       VIEW DASHBOARD
                     </span>
@@ -190,7 +217,7 @@ export const LoginPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                {selectedRole === 'citizen' ? 'Mobile Number / Patient ID' : 'Employee ID / Registered Mobile'}
+                {selectedRole === 'citizen' ? 'Mobile Number / Patient ID' : selectedRole === 'doctor' ? 'Doctor ID / Medical Registration ID' : 'Employee ID / Registered Mobile'}
               </label>
               <div className="relative">
                 <Phone className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
