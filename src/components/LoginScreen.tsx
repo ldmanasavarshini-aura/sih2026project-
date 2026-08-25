@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Stethoscope, UserCheck, ShieldCheck, User, ArrowRight, Heart, Globe } from 'lucide-react';
+import { Stethoscope, UserCheck, ShieldCheck, User, ArrowRight, Heart, Globe, UserPlus, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { UserSession, Role } from '../App';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loginUser } from '../auth';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { patients } from '../data/mock';
 
 interface RoleOption {
   id: Role;
@@ -27,6 +30,15 @@ export default function LoginScreen({ onLogin }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Patient registration states
+  const [showRegister, setShowRegister] = useState(false);
+  const [regName, setRegName] = useState('');
+  const [regAge, setRegAge] = useState('');
+  const [regVillage, setRegVillage] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [registeredId, setRegisteredId] = useState<string | null>(null);
+  const [regSuccessUser, setRegSuccessUser] = useState<any>(null);
 
   const roles: RoleOption[] = [
     {
@@ -80,6 +92,63 @@ export default function LoginScreen({ onLogin }: Props) {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedRole) return;
+
+    if (selected === 'patient') {
+      if (!userId) {
+        setError('Please enter your Patient ID.');
+        return;
+      }
+      setError(null);
+      setLoading(true);
+      
+      let foundPatient: any = null;
+      
+      try {
+        // Query Users collection in Firestore
+        const q = query(collection(db, 'Users'), where('patientId', '==', userId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0].data();
+          foundPatient = {
+            id: userDoc.patientId || userId,
+            name: userDoc.name || 'Patient User',
+            patientId: userDoc.patientId || userId
+          };
+          console.log('Successfully authenticated patient via Firestore Users collection');
+        }
+      } catch (firestoreErr) {
+        console.warn('Firestore query failed, falling back to local list:', firestoreErr);
+      }
+      
+      // Fallback: search in local mock patients list
+      if (!foundPatient) {
+        const local = patients.find(p => p.id === userId || p.name.toLowerCase() === userId.toLowerCase());
+        if (local) {
+          foundPatient = {
+            id: local.id,
+            name: local.name,
+            patientId: local.id
+          };
+          console.log('Successfully authenticated patient via local mock database');
+        }
+      }
+      
+      if (foundPatient) {
+        onLogin({
+          role: 'patient',
+          name: foundPatient.name,
+          id: foundPatient.id,
+          patientId: foundPatient.patientId
+        });
+        setLoading(false);
+        return;
+      } else {
+        setError('Patient ID not found. If you are a new patient, click "New patient? Create Account" inside the Patient role card.');
+        setLoading(false);
+        return;
+      }
+    }
+
     if (!userId || !password) {
       setError('Please enter both username/email and password.');
       return;
@@ -108,6 +177,120 @@ export default function LoginScreen({ onLogin }: Props) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRegister(e?: React.FormEvent | React.MouseEvent) {
+    console.log('handleRegister triggered', { regName, regAge, regVillage, regPhone });
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    if (!regName.trim() || !regAge.trim() || !regVillage.trim()) {
+      setError('Please fill in all required fields (Name, Age, Village).');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+
+    const generatedId = `SS-PT-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    try {
+      // 1. Save to Firestore with a 1.5-second timeout to prevent hanging on dummy credentials
+      const firestorePromise = addDoc(collection(db, 'Users'), {
+        patientId: generatedId,
+        name: regName,
+        age: Number(regAge),
+        village: regVillage,
+        phone: regPhone || '',
+        role: 'patient'
+      });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore timeout')), 1500)
+      );
+
+      try {
+        await Promise.race([firestorePromise, timeoutPromise]);
+        console.log('Successfully registered patient in Firestore:', generatedId);
+      } catch (firestoreErr: any) {
+        console.error('Firestore storage failed or timed out:', firestoreErr);
+      }
+
+      // 2. Sync to local JSON server/API to make it visible to health worker list/dashboard
+      try {
+        const res = await fetch('/api/patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: generatedId,
+            name: regName,
+            age: Number(regAge),
+            village: regVillage,
+            phone: regPhone || '',
+            gender: 'Female', // Default placeholder
+            riskLevel: 'Green',
+            riskReason: 'Self Registered',
+            latestVitals: {
+              bp: '120/80',
+              temp: '98.6°F',
+              heartRate: 72,
+              spO2: 98,
+              recordedAt: new Date().toLocaleString(),
+              recordedBy: regName
+            }
+          })
+        });
+        if (res.ok) {
+          console.log('Successfully synced patient with local JSON server');
+        }
+      } catch (apiErr) {
+        console.warn('Backend server registration sync unavailable. Storing locally only.');
+      }
+
+      // Also add to local import map of patients as a runtime backup
+      patients.unshift({
+        id: generatedId,
+        name: regName,
+        age: Number(regAge),
+        village: regVillage,
+        phone: regPhone || null,
+        type: 'general',
+        lastVisit: new Date().toISOString().split('T')[0],
+        condition: 'Self Registered Patient',
+        riskLevel: 'low',
+        bloodGroup: 'O+',
+        weight: '—',
+        bp: '120/80'
+      });
+
+      // 3. Set success state
+      setRegisteredId(generatedId);
+      setRegSuccessUser({
+        name: regName,
+        id: generatedId,
+        patientId: generatedId
+      });
+      
+      // Clear fields
+      setRegName('');
+      setRegAge('');
+      setRegVillage('');
+      setRegPhone('');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleRegSuccessLogin() {
+    if (regSuccessUser) {
+      onLogin({
+        role: 'patient',
+        name: regSuccessUser.name,
+        id: regSuccessUser.id,
+        patientId: regSuccessUser.patientId
+      });
     }
   }
 
@@ -167,10 +350,15 @@ export default function LoginScreen({ onLogin }: Props) {
             <p className="text-white/60 text-sm font-medium uppercase tracking-widest mb-3 ml-1">{t('login.selectRole')}</p>
             <div className="grid grid-cols-1 gap-3">
               {roles.map(role => (
-                <button
+                <div
                   key={role.id}
-                  onClick={() => setSelected(role.id)}
-                  className={`w-text-left text-left p-4 rounded-xl border-2 transition-all duration-150 ${
+                  onClick={() => {
+                    setSelected(role.id);
+                    setShowRegister(false);
+                    setRegisteredId(null);
+                    setError(null);
+                  }}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-150 cursor-pointer ${
                     selected === role.id
                       ? 'bg-white border-white shadow-lg scale-[1.01]'
                       : 'bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/40 backdrop-blur-sm'
@@ -188,6 +376,28 @@ export default function LoginScreen({ onLogin }: Props) {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected === role.id ? role.bg + ' ' + role.color : 'bg-white/20 text-white/70'}`}>{role.sublabel}</span>
                       </div>
                       <p className={`text-sm mt-0.5 leading-snug ${selected === role.id ? 'text-slate-500' : 'text-white/60'}`}>{role.description}</p>
+                      
+                      {role.id === 'patient' && (
+                        <div className="mt-2.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelected('patient');
+                              setShowRegister(true);
+                              setRegisteredId(null);
+                              setError(null);
+                            }}
+                            className={`text-xs font-bold underline transition-all ${
+                              selected === 'patient'
+                                ? 'text-orange-700 hover:text-orange-950'
+                                : 'text-orange-300 hover:text-orange-200'
+                            }`}
+                          >
+                            New patient? Create Account
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {selected === role.id && (
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${role.bg}`}>
@@ -195,7 +405,7 @@ export default function LoginScreen({ onLogin }: Props) {
                       </div>
                     )}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -212,7 +422,141 @@ export default function LoginScreen({ onLogin }: Props) {
                   <p className="text-slate-500 font-medium">{t('login.selectRolePrompt')}</p>
                   <p className="text-slate-400 text-sm mt-1">{t('login.selectRoleDescLeft')}</p>
                 </div>
+              ) : registeredId ? (
+                // Success screen view
+                <div className="text-center py-6 space-y-5 animate-fade-in">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-md border border-emerald-100">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Registration Successful!</h3>
+                    <p className="text-sm text-slate-500 mt-1">Your new patient account has been created.</p>
+                  </div>
+                  
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-w-xs mx-auto">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Patient ID</span>
+                    <span className="text-2xl font-extrabold text-slate-900 font-mono tracking-wide mt-1 block select-all">
+                      {registeredId}
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-2 font-medium">Please note this ID down. You will use it to log in next time.</p>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleRegSuccessLogin}
+                      className="w-full bg-[#1C3A5E] hover:bg-[#132845] text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      Log In & Go to Dashboard <ArrowRight size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegisteredId(null);
+                        setShowRegister(false);
+                        setUserId(registeredId || '');
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-800 font-medium block mx-auto underline transition-colors cursor-pointer"
+                    >
+                      Back to Sign In
+                    </button>
+                  </div>
+                </div>
+              ) : showRegister ? (
+                // Registration form view
+                <form onSubmit={handleRegister} className="space-y-4 animate-fade-in">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-1.5 bg-orange-50 text-orange-700">
+                    <UserPlus size={18} />
+                    <span>Create Patient Account</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Patient Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={regName}
+                        onChange={e => setRegName(e.target.value)}
+                        placeholder="Enter full name"
+                        className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Age (Years) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={regAge}
+                          onChange={e => setRegAge(e.target.value)}
+                          placeholder="e.g. 28"
+                          min="0"
+                          max="125"
+                          className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Village <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={regVillage}
+                          onChange={e => setRegVillage(e.target.value)}
+                          placeholder="e.g. Wada"
+                          className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Phone Number (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={regPhone}
+                        onChange={e => setRegPhone(e.target.value)}
+                        placeholder="10-digit mobile number"
+                        className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-3">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="pt-2 space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleRegister}
+                      disabled={loading}
+                      className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      {loading ? 'Creating Account...' : 'Create Account'} <Sparkles size={15} />
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRegister(false);
+                        setError(null);
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-800 font-medium block mx-auto underline transition-colors cursor-pointer"
+                    >
+                      Cancel & Return to Sign In
+                    </button>
+                  </div>
+                </form>
               ) : (
+                // Standard login form
                 <form onSubmit={handleLogin}>
                   <div className="mb-5">
                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${selectedRole!.bg} ${selectedRole!.color}`}>
@@ -232,16 +576,18 @@ export default function LoginScreen({ onLogin }: Props) {
                           className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('login.password')}</label>
-                        <input
-                          type="password"
-                          value={password}
-                          onChange={e => setPassword(e.target.value)}
-                          placeholder={t('login.placeholderPassword')}
-                          className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                        />
-                      </div>
+                      {selected !== 'patient' && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('login.password')}</label>
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder={t('login.placeholderPassword')}
+                            className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 

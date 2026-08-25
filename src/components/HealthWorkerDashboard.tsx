@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   AlertTriangle, CheckCircle, Clock, Plus, Send, User, Phone, MapPin, Calendar, UserPlus, Stethoscope,
-  Wind, Heart, Brain, Droplet, Thermometer, ShieldAlert, AlertOctagon, Check, RefreshCw, Eye, Activity
+  Wind, Heart, Brain, Droplet, Thermometer, ShieldAlert, AlertOctagon, Check, RefreshCw, Eye, Activity, X
 } from 'lucide-react';
 import type { UserSession } from '../App';
 import { patients, appointments, followUps, referrals, triageSymptoms } from '../data/mock';
@@ -11,6 +11,7 @@ import { calculateRiskScore } from '../aiRisk';
 import { addFollowUp } from '../followups';
 import { notifyFollowUp } from '../sms';
 import { generateCallLink } from '../VideoCall';
+import { ClinicMap } from '../ClinicMap';
 
 interface Props {
   page: string;
@@ -18,6 +19,7 @@ interface Props {
   onRefresh?: () => void;
   selectedLocation: string;
   setSelectedLocation: (loc: string) => void;
+  setActivePage?: (page: string) => void;
 }
 
 function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: string }) {
@@ -811,78 +813,440 @@ function RegisterPatient({ onRefresh }: { onRefresh?: () => void }) {
   );
 }
 
-function TriageTool() {
+function TriageTool({ setActivePage }: { setActivePage?: (page: string) => void }) {
   const { t } = useLanguage();
+  
+  // Demo Patients combined with Mock data patients
+  const demoPatients = [
+    { 
+      id: 'P-1001', 
+      name: 'Priya Sharma', 
+      age: 24, 
+      gender: 'Female', 
+      village: 'Wada', 
+      phone: '9876543211', 
+      type: 'maternal', 
+      lastVisit: '2026-08-15', 
+      condition: 'Pregnant — 6 months', 
+      riskLevel: 'medium', 
+      bloodGroup: 'O+', 
+      weight: '58 kg', 
+      bp: '120/80', 
+      allergies: 'Penicillin', 
+      history: 'First pregnancy, mild gestational anemia.' 
+    },
+    { 
+      id: 'P-1002', 
+      name: 'Rajesh Kumar', 
+      age: 48, 
+      gender: 'Male', 
+      village: 'Bhiwandi', 
+      phone: '9812345670', 
+      type: 'chronic', 
+      lastVisit: '2026-08-01', 
+      condition: 'Hypertension', 
+      riskLevel: 'medium', 
+      bloodGroup: 'A+', 
+      weight: '72 kg', 
+      bp: '140/90', 
+      allergies: 'Sulfa drugs', 
+      history: 'Diagnosed hypertension in 2024. Stable on meds.' 
+    },
+    { 
+      id: 'P-1003', 
+      name: 'Sunita Patil', 
+      age: 32, 
+      gender: 'Female', 
+      village: 'Murbad', 
+      phone: '9923456781', 
+      type: 'general', 
+      lastVisit: '2026-08-10', 
+      condition: 'Type 2 Diabetes', 
+      riskLevel: 'high', 
+      bloodGroup: 'B+', 
+      weight: '65 kg', 
+      bp: '135/85', 
+      allergies: 'None reported', 
+      history: 'History of gestational diabetes in 2022. Borderline HbA1c.' 
+    }
+  ];
+
+  const allPatients = [
+    ...demoPatients,
+    ...patients.map(p => ({
+      id: p.id,
+      name: p.name,
+      age: p.age,
+      gender: p.type === 'maternal' ? 'Female' : 'Not available',
+      village: p.village,
+      phone: p.phone || 'Not available',
+      type: p.type,
+      lastVisit: p.lastVisit,
+      condition: p.condition,
+      riskLevel: p.riskLevel,
+      bloodGroup: p.bloodGroup || 'Not available',
+      weight: p.weight || 'Not available',
+      bp: p.bp || 'Not available',
+      allergies: 'None reported',
+      history: p.condition
+    }))
+  ];
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [complaint, setComplaint] = useState('');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [result, setResult] = useState<'urgent' | 'soon' | 'routine' | null>(null);
+  
+  const [triageResult, setTriageResult] = useState<any | null>(null);
+
+  // Search filter
+  const filteredPatients = allPatients.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    p.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   function toggleSymptom(sym: string) {
-    setSelectedSymptoms(prev => prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym]);
-    setResult(null);
+    setSelectedSymptoms(prev => 
+      prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym]
+    );
+    setTriageResult(null); // Reset result when symptoms change
   }
 
-  function assess() {
-    const urgency = checkUrgency(selectedSymptoms);
-    setResult(urgency === 'Emergency' ? 'urgent' : urgency === 'Soon' ? 'soon' : 'routine');
+  function handleAssess() {
+    if (!selectedPatient || selectedSymptoms.length === 0) return;
+
+    // Severity assessment logic
+    const criticalSymptoms = ['Chest Pain', 'Breathlessness', 'Bleeding', 'Reduced Foetal Movement'];
+    const urgentSymptoms = ['Fever', 'Vomiting', 'Jaundice', 'Weakness', 'Abdominal Pain', 'Dizziness', 'Diarrhoea'];
+
+    const selectedCritical = selectedSymptoms.filter(s => criticalSymptoms.includes(s));
+    const selectedUrgent = selectedSymptoms.filter(s => urgentSymptoms.includes(s));
+
+    let severity: 'Emergency' | 'Urgent' | 'Routine' = 'Routine';
+    let reason = '';
+    let recommendation = '';
+    let facility = '';
+    let distance = '0.0 km';
+
+    if (selectedCritical.length > 0) {
+      severity = 'Emergency';
+      reason = `Critical danger signs detected: [${selectedCritical.join(', ')}]. This patient shows acute distress indicating potential medical crisis.`;
+      recommendation = 'Immediate referral to the nearest emergency facility or Sub-district Hospital.';
+      facility = 'Thane Civil Hospital (Emergency Services)';
+      distance = '12.4 km';
+    } else if (selectedUrgent.length > 0) {
+      severity = 'Urgent';
+      reason = `Urgent clinical symptoms detected: [${selectedUrgent.join(', ')}]. Immediate attention requested to prevent progression of symptoms.`;
+      recommendation = 'Arrange a medical doctor consultation or CHO review within 24 hours.';
+      facility = 'Wada PHC (Secondary Care)';
+      distance = '8.2 km';
+    } else {
+      severity = 'Routine';
+      reason = `Routine healthcare concerns: [${selectedSymptoms.join(', ')}]. No critical or urgent indicators found. Stable profile.`;
+      recommendation = 'Schedule a routine consultation and continuous local tracking.';
+      facility = 'Asangaon PHC (General Wellness OPD)';
+      distance = '5.6 km';
+    }
+
+    setTriageResult({
+      severity,
+      reason,
+      recommendation,
+      facility,
+      distance
+    });
   }
+
+  const handleSelectPatient = (patient: any) => {
+    setSelectedPatient(patient);
+    setSearchQuery('');
+    // Clear previous complaints and symptoms
+    setComplaint('');
+    setSelectedSymptoms([]);
+    setTriageResult(null);
+  };
 
   return (
-    <div className="max-w-2xl space-y-5">
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="font-semibold text-slate-800 mb-1">{t('triage.title')}</h3>
-        <p className="text-sm text-slate-500 mb-4">{t('triage.assessDetails')}</p>
-        <div className="flex flex-wrap gap-2">
-          {triageSymptoms.map(sym => (
+    <div className="space-y-6 max-w-4xl">
+      {/* 1. Patient Selection */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">1. Select Patient</h3>
+        
+        {selectedPatient ? (
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-sm">
+                {selectedPatient.name[0]}
+              </div>
+              <div>
+                <span className="font-semibold text-slate-800 text-sm">{selectedPatient.name}</span>
+                <span className="text-xs text-slate-400 font-mono ml-2">({selectedPatient.id})</span>
+              </div>
+            </div>
             <button
-              key={sym}
-              onClick={() => toggleSymptom(sym)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all cursor-pointer ${
-                selectedSymptoms.includes(sym)
-                  ? 'bg-navy text-white border-navy'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'
-              }`}
+              type="button"
+              onClick={() => setSelectedPatient(null)}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold underline cursor-pointer"
             >
-              {getSymptomTranslation(sym, t)}
+              Change Patient
             </button>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            onClick={assess}
-            disabled={selectedSymptoms.length === 0}
-            className="bg-[#1C3A5E] hover:bg-[#132845] disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors cursor-pointer"
-          >
-            {t('register.assessUrgency')}
-          </button>
-          <span className="text-xs text-slate-400">{t('triage.symptomsSelected', { count: selectedSymptoms.length })}</span>
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search patient by name or ID (e.g. Priya, P-1001)..."
+                className="flex-1 bg-white border border-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded-lg px-3.5 py-2 text-sm text-slate-800 placeholder-slate-400"
+              />
+              <select
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    const pat = allPatients.find(p => p.id === val);
+                    if (pat) handleSelectPatient(pat);
+                  }
+                }}
+                className="bg-white border border-slate-200 hover:border-slate-350 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                defaultValue=""
+              >
+                <option value="" disabled>-- Or Select From List --</option>
+                {allPatients.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.id}) - {p.village}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {searchQuery.trim() && (
+              <div className="border border-slate-100 rounded-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-50 bg-slate-50/50">
+                {filteredPatients.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-400">No matching patients found.</div>
+                ) : (
+                  filteredPatients.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSelectPatient(p)}
+                      className="w-full text-left p-3 hover:bg-slate-50 flex justify-between items-center transition-colors cursor-pointer"
+                    >
+                      <div className="text-xs">
+                        <span className="font-semibold text-slate-800">{p.name}</span>
+                        <span className="text-slate-400 font-mono ml-2">({p.id})</span>
+                      </div>
+                      <span className="text-[10px] bg-white border border-slate-200 text-slate-500 font-bold px-2 py-0.5 rounded-full">{p.village}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            
+            {/* Show Demo patients guide banner */}
+            <div className="bg-blue-50/60 border border-blue-200/50 rounded-lg p-3 text-xs text-blue-700">
+              💡 <strong>Demo Patients:</strong> Priya Sharma (<code>P-1001</code>), Rajesh Kumar (<code>P-1002</code>), and Sunita Patil (<code>P-1003</code>) are configured for verification.
+            </div>
+          </div>
+        )}
       </div>
 
-      {result && (
-        <div className={`rounded-xl border-2 p-5 ${
-          result === 'urgent' ? 'bg-red-50 border-red-300' :
-          result === 'soon' ? 'bg-amber-50 border-amber-300' :
-          'bg-emerald-50 border-emerald-300'
-        }`}>
-          <div className="flex items-start gap-3">
-            {result === 'urgent' && <AlertTriangle size={22} className="text-red-600 flex-shrink-0 mt-0.5" />}
-            {result === 'soon' && <Clock size={22} className="text-amber-600 flex-shrink-0 mt-0.5" />}
-            {result === 'routine' && <CheckCircle size={22} className="text-emerald-600 flex-shrink-0 mt-0.5" />}
-            <div>
-              <div className={`font-bold text-lg ${result === 'urgent' ? 'text-red-700' : result === 'soon' ? 'text-amber-700' : 'text-emerald-700'}`}>
-                {result === 'urgent' ? t('triage.urgentTitle') : result === 'soon' ? t('triage.soonTitle') : t('triage.routineTitle')}
+      {selectedPatient && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left panel: Patient details */}
+          <div className="md:col-span-1 space-y-6">
+            {/* 2. Patient Information Card */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">2. Patient Info</h3>
+              
+              <div className="space-y-3.5 text-xs text-slate-650">
+                <div>
+                  <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Patient Name</span>
+                  <span className="font-bold text-slate-800 text-sm">{selectedPatient.name}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">ID</span>
+                    <span className="font-semibold text-slate-800 font-mono">{selectedPatient.id}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Age / Gender</span>
+                    <span className="font-semibold text-slate-800">{selectedPatient.age} yrs / {selectedPatient.gender}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Village</span>
+                    <span className="font-semibold text-slate-800">{selectedPatient.village}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Phone</span>
+                    <span className="font-semibold text-slate-800">{selectedPatient.phone}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Blood Group</span>
+                    <span className="font-semibold text-slate-800">{selectedPatient.bloodGroup}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Last ANC / Visit</span>
+                    <span className="font-semibold text-slate-800">{selectedPatient.lastVisit}</span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-2.5">
+                  <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Medical Conditions</span>
+                  <p className="font-medium text-slate-800 leading-relaxed mt-0.5">{selectedPatient.condition || 'None declared'}</p>
+                </div>
+
+                <div>
+                  <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">Allergies</span>
+                  <span className={`font-semibold ${selectedPatient.allergies && selectedPatient.allergies !== 'None' && selectedPatient.allergies !== 'None reported' ? 'text-red-650' : 'text-slate-800'}`}>
+                    {selectedPatient.allergies}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider font-mono">History</span>
+                  <p className="font-medium text-slate-500 leading-relaxed mt-0.5">{selectedPatient.history || 'Not available'}</p>
+                </div>
               </div>
-              <p className={`text-sm mt-1 ${result === 'urgent' ? 'text-red-600' : result === 'soon' ? 'text-amber-600' : 'text-emerald-650'}`}>
-                {result === 'urgent' ? t('triage.urgentDesc') :
-                 result === 'soon' ? t('triage.soonDesc') :
-                 t('triage.routineDesc')}
-              </p>
-              <div className="mt-3 flex gap-2">
-                <button className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${result === 'urgent' ? 'bg-red-600 text-white' : result === 'soon' ? 'bg-amber-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                  {result === 'urgent' ? t('triage.startTeleconsult') : t('triage.bookAppointment')}
+            </div>
+          </div>
+
+          {/* Right panel: Symptoms and Assessment */}
+          <div className="md:col-span-2 space-y-6">
+            {/* 3. Current Complaint */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">3. Current Health Complaint</h3>
+              <textarea
+                value={complaint}
+                onChange={(e) => setComplaint(e.target.value)}
+                placeholder="Enter patient's main complaint description here (e.g. Fever and body pains since 2 days, difficulty swallowing)..."
+                className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded-lg p-3 text-sm text-slate-850 placeholder-slate-400 h-20 resize-none transition-all"
+              />
+            </div>
+
+            {/* 4. Symptoms Selection Grid */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 className="text-sm font-bold text-slate-850 uppercase tracking-wider">4. Select Symptoms</h3>
+                <span className="text-xs bg-slate-105 text-slate-650 font-bold px-2.5 py-1 rounded-full">
+                  {selectedSymptoms.length} {selectedSymptoms.length === 1 ? 'symptom' : 'symptoms'} selected
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {triageSymptoms.map(sym => {
+                  const isChecked = selectedSymptoms.includes(sym);
+                  const isDanger = ['Chest Pain', 'Breathlessness', 'Bleeding', 'Reduced Foetal Movement'].includes(sym);
+                  return (
+                    <button
+                      key={sym}
+                      type="button"
+                      onClick={() => toggleSymptom(sym)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border text-left flex items-center justify-between transition-all cursor-pointer ${
+                        isChecked
+                          ? isDanger
+                            ? 'bg-rose-50 border-rose-500 text-rose-800 ring-1 ring-rose-500'
+                            : 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 hover:border-slate-350'
+                      }`}
+                    >
+                      <span>{getSymptomTranslation(sym, t)}</span>
+                      {isDanger && !isChecked && <span className="w-1.5 h-1.5 bg-rose-500 rounded-full" title="Danger Sign" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 5. Assess Urgency Trigger */}
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleAssess}
+                  disabled={selectedSymptoms.length === 0}
+                  className="w-full sm:w-auto bg-[#1C3A5E] hover:bg-[#132845] disabled:opacity-40 disabled:hover:bg-[#1C3A5E] text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-all cursor-pointer shadow-sm"
+                >
+                  Assess Urgency
                 </button>
               </div>
             </div>
+
+            {/* 6. Display Triage Result */}
+            {triageResult && (
+              <div className="animate-fade-in space-y-6">
+                <div className={`rounded-xl border-2 p-5 shadow-xs ${
+                  triageResult.severity === 'Emergency' ? 'bg-red-50/50 border-red-200' :
+                  triageResult.severity === 'Urgent' ? 'bg-amber-50/50 border-amber-200' :
+                  'bg-emerald-50/50 border-emerald-200'
+                }`}>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 mt-0.5 text-2xl">
+                      {triageResult.severity === 'Emergency' ? '🔴' : triageResult.severity === 'Urgent' ? '🟠' : '🟢'}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-widest">Demo Triage Assessment</h4>
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                          triageResult.severity === 'Emergency' ? 'bg-red-100 text-red-800' :
+                          triageResult.severity === 'Urgent' ? 'bg-amber-100 text-amber-800' :
+                          'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {triageResult.severity === 'Emergency' ? 'Emergency Care' : triageResult.severity === 'Urgent' ? 'Urgent Care' : 'Routine Consultation'}
+                        </span>
+                      </div>
+
+                      <div className={`text-xl font-bold mt-2 ${
+                        triageResult.severity === 'Emergency' ? 'text-red-700' : 
+                        triageResult.severity === 'Urgent' ? 'text-amber-700' : 
+                        'text-emerald-700'
+                      }`}>
+                        Urgency Level: {triageResult.severity}
+                      </div>
+
+                      <div className="mt-3.5 space-y-3 text-xs">
+                        <div>
+                          <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider">Trigger Reasons</span>
+                          <p className="text-slate-700 leading-relaxed font-medium mt-0.5">{triageResult.reason}</p>
+                        </div>
+                        
+                        <div>
+                          <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider">Recommended Action</span>
+                          <p className="text-slate-800 font-bold leading-relaxed mt-0.5">⚡ {triageResult.recommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7. Nearest Recommended Facility */}
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="font-bold text-slate-400 uppercase text-[9px] block tracking-wider">Recommended Referral Facility</span>
+                    <h4 className="font-bold text-slate-800 text-sm">{triageResult.facility}</h4>
+                    <p className="text-xs text-slate-500 font-medium font-semibold">📍 Estimated Distance: {triageResult.distance} • Status: <span className="text-emerald-600 font-bold">Operational</span></p>
+                  </div>
+                  
+                  {setActivePage && (
+                    <button
+                      type="button"
+                      onClick={() => setActivePage('map')}
+                      className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
+                      <MapPin size={13} />
+                      View on Clinic Map
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1012,7 +1376,7 @@ function FollowUps({ selectedLocation }: { selectedLocation: string }) {
   );
 }
 
-export default function HealthWorkerDashboard({ page, session, onRefresh, selectedLocation, setSelectedLocation }: Props) {
+export default function HealthWorkerDashboard({ page, session, onRefresh, selectedLocation, setSelectedLocation, setActivePage }: Props) {
   const { t } = useLanguage();
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -1054,9 +1418,10 @@ export default function HealthWorkerDashboard({ page, session, onRefresh, select
       <div>
         {page === 'overview' && <Overview selectedLocation={selectedLocation} />}
         {page === 'register' && <RegisterPatient onRefresh={onRefresh} />}
-        {page === 'triage' && <TriageTool />}
+        {page === 'triage' && <TriageTool setActivePage={setActivePage} />}
         {page === 'appointments' && <Appointments selectedLocation={selectedLocation} />}
         {page === 'followups' && <FollowUps selectedLocation={selectedLocation} />}
+        {page === 'map' && <ClinicMap />}
       </div>
     </div>
   );

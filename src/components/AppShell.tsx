@@ -46,7 +46,6 @@ function getNavItems(role: Role, t: any): NavItem[] {
       { id: 'teleconsult', label: t('common.startTeleconsult'), icon: <Video size={18} /> },
       { id: 'records', label: t('sidebar.records'), icon: <FileText size={18} /> },
     ];
-    default: return [];
   }
 }
 
@@ -56,7 +55,6 @@ function getRoleColor(role: Role) {
     case 'doctor': return { accent: 'bg-blue-600', text: 'text-blue-600', light: 'bg-blue-50', ring: 'ring-blue-300' };
     case 'admin': return { accent: 'bg-purple-600', text: 'text-purple-600', light: 'bg-purple-50', ring: 'ring-purple-300' };
     case 'patient': return { accent: 'bg-orange-500', text: 'text-orange-500', light: 'bg-orange-50', ring: 'ring-orange-300' };
-    default: return { accent: 'bg-slate-600', text: 'text-slate-600', light: 'bg-slate-50', ring: 'ring-slate-300' };
   }
 }
 
@@ -66,7 +64,6 @@ function getRoleBadge(role: Role, t: any) {
     case 'doctor': return t('login.roles.doctor');
     case 'admin': return t('login.roles.admin');
     case 'patient': return t('login.roles.patient');
-    default: return '';
   }
 }
 
@@ -93,6 +90,7 @@ export default function AppShell({ session, onLogout, onRefresh }: Props) {
           onRefresh={onRefresh} 
           selectedLocation={selectedLocation}
           setSelectedLocation={setSelectedLocation}
+          setActivePage={setActivePage}
         />
       );
       case 'doctor': return <DoctorDashboard page={activePage} session={session} />;

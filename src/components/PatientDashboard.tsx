@@ -13,7 +13,7 @@ interface Props {
 
 function MyHealth({ session, onStartCall }: { session: UserSession; onStartCall: (id: string) => void }) {
   const { t } = useLanguage();
-  const patient = patients[0];
+  const patient = patients.find(p => p.id === session.patientId) || patients[0];
 
   return (
     <div className="space-y-5">
@@ -28,7 +28,13 @@ function MyHealth({ session, onStartCall }: { session: UserSession; onStartCall:
             <div className="text-white/50 text-xs mt-1 font-mono">{patient.id}</div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-orange-300">{t('common.highRisk').split(' ')[0]}</div>
+            <div className="text-2xl font-bold text-orange-300">
+              {patient.riskLevel === 'high' 
+                ? t('common.highRisk').split(' ')[0] 
+                : patient.riskLevel === 'medium' 
+                ? t('common.mediumRisk').split(' ')[0] 
+                : t('common.lowRisk').split(' ')[0]}
+            </div>
             <div className="text-white/60 text-xs">{t('register.risk')}</div>
           </div>
         </div>
@@ -115,7 +121,7 @@ function AppointmentsList({ session, onStartCall }: { session: UserSession; onSt
       
       const newApt = {
         id: newAptId,
-        patientId: 'MH-2024-001',
+        patientId: session.patientId || 'MH-2024-001',
         patientName: session.name || 'Sunita Thorat',
         village: 'Wada',
         date: aptDate,
@@ -130,7 +136,7 @@ function AppointmentsList({ session, onStartCall }: { session: UserSession; onSt
 
       appointments.unshift(newApt as any);
 
-      const patientPhone = patients.find(p => p.id === 'MH-2024-001')?.phone || '9876543210';
+      const patientPhone = patients.find(p => p.id === session.patientId)?.phone || '9876543210';
       await notifyAppointment(patientPhone, aptDate, '10:00 AM');
 
       setBooked(true);
@@ -148,7 +154,7 @@ function AppointmentsList({ session, onStartCall }: { session: UserSession; onSt
           <h3 className="font-semibold text-slate-800">{t('patient.myAppointments')}</h3>
         </div>
         <div className="divide-y divide-slate-100">
-          {appointments.filter(a => a.patientId === 'MH-2024-001').map(apt => (
+          {appointments.filter(a => a.patientId === session.patientId).map(apt => (
             <div key={apt.id} className="px-5 py-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100">
